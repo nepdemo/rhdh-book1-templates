@@ -106,9 +106,9 @@ spec:
           application_id: ${{parameters.application_id}}
           description: ${{parameters.description}}
     # demo for custom actions
-    - id: company-title
+    - id: acme:example
       name: Add company title to catalog-info.yaml
-      action: catalog:company-title
+      action: acme:example
       input:
         labels: {
           company: 'My Company'
