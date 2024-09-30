@@ -106,13 +106,13 @@ spec:
           application_id: ${{parameters.application_id}}
           description: ${{parameters.description}}
     # demo for custom actions
-    - id: catalog:company-title
-      name: Add company title to catalog-info.yaml
-      action: catalog:company-title
-      input:
-        labels: {
-          company: 'My Company'
-        }
+    # - id: catalog:company-title
+    #   name: Add company title to catalog-info.yaml
+    #   action: catalog:company-title
+    #   input:
+    #     labels: {
+    #       company: 'My Company'
+    #     }
     - id: publishSource
       name: Publishing to Source Code Repository
       action: publish:gitlab
