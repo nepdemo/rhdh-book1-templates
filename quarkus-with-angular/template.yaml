@@ -3,7 +3,7 @@ kind: Template
 metadata:
   name: wzh-quarkus-with-angular
   title: WZH Quarkus Service with hosted Angular Frontend
-  description: Creates a Quarkus service hosting an Angular frontend
+  description: WZH Creates a Quarkus service hosting an Angular frontend
   tags:
     - java
     - quarkus
