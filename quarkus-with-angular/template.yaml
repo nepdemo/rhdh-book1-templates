@@ -32,6 +32,10 @@ spec:
           type: string
           description: Kubernetes Namespace for gitlab
           default: demo-gitlab
+        git_token:
+          title: GitHub access token
+          type: string
+          description: GitHub access token
         description:
           title: Description
           type: string
@@ -129,6 +133,7 @@ spec:
           source_repository: https://gitlab-${{parameters.k8s_namespace}}${{parameters.cluster_id}}/${{parameters.gitlabGroup}}/${{parameters.namespace}}-${{parameters.application_id}}.git
           repository_name: ${{parameters.namespace}}-${{parameters.application_id}}
           git_owner: ${{parameters.gitlabGroup}}
+          git_token: ${{parameters.git_token}}
           cluster: ${{parameters.cluster_id}}
           namespace: ${{parameters.namespace}}
           gitops_namespace: ${{parameters.gitops_namespace}}

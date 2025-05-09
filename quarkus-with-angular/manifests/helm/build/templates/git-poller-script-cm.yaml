@@ -97,7 +97,7 @@ data:
             echo "Tekton EventListener triggered successfully (HTTP ${response_code})."
 
             # 4. Update the last triggered commit SHA in the State ConfigMap
-            echo "Updating ConfigMap '${STATE_CONFIGMAP}' key '${STATE_CM_KEY}' with new SHA ${CURRENT_COMMIT_SHA}..."
+            echo "Updating ConfigMap '${STATE_CONFIGMAP}' key '${STATE_CM_KEY}' with new SHA ${CURRENT_COMMIT_SHA}..."`
             # Use kubectl patch to update the specific key in the data field
             kubectl patch configmap "${STATE_CONFIGMAP}" -n "${TEKTON_NAMESPACE}" \
                     --patch '{"data":{"'"${STATE_CM_KEY}"'":"'"${CURRENT_COMMIT_SHA}"'"}}'

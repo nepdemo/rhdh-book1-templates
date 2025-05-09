@@ -6,7 +6,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: git-poller-state-updater-role-{{ .Values.app.name }} # Add app name for uniqueness
-  namespace: {{ .Release.Namespace }} # Use the release namespace
+  namespace: {{ .Values.app.namespace }} # Use the release namespace
 rules:
 - apiGroups: [""] # Core Kubernetes API group
   resources: ["configmaps"]
@@ -18,7 +18,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: git-poller-state-updater-binding-{{ .Values.app.name }} # Add app name for uniqueness
-  namespace: {{ .Release.Namespace }} # Use the release namespace
+  namespace: {{ .Values.app.namespace }} # Use the release namespace
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -26,4 +26,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: git-poller-sa # Name of the ServiceAccount defined above
-  namespace: {{ .Release.Namespace }} # Must match the ServiceAccount's namespace
+  namespace: {{ .Values.app.namespace }} # Must match the ServiceAccount's namespace
