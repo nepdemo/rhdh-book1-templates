@@ -1,0 +1,121 @@
+{{/*
+ConfigMap for the Polling Script
+This ConfigMap holds the bash script that performs the polling logic.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: git-poller-script-{{ .Values.app.name }} # Add app name for uniqueness
+data:
+  poll-and-trigger.sh: |
+    #!/bin/bash
+
+    set -euo pipefail
+
+    REPO_URL="$1"
+    BRANCH="$2"
+    EVENT_LISTENER_SERVICE="$3" # Tekton EventListener Service Name
+    TEKTON_NAMESPACE="$4"       # Tekton EventListener Namespace
+    STATE_CONFIGMAP="$5"        # ConfigMap storing the last commit SHA
+    STATE_CM_KEY="$6"           # Key within the state ConfigMap (e.g., last-commit-sha)
+    CONFIGURED_USER_EMAIL="$7"  # New argument for configured email
+
+    # Construct the EventListener URL (assuming cluster internal service discovery)
+    EVENT_LISTENER_URL="http://el-${EVENT_LISTENER_SERVICE}.${TEKTON_NAMESPACE}.svc.cluster.local:8080"
+
+    echo "Starting Git polling for ${REPO_URL} branch ${BRANCH}..."
+
+    # Configure Git to use the PAT from the mounted Secret for authentication
+    # This assumes the Secret is mounted at /etc/git-credentials with a file named 'pat'
+    GIT_PAT_FILE="/etc/git-credentials/pat"
+    if [ -f "$GIT_PAT_FILE" ]; then
+        GIT_PAT=$(cat "$GIT_PAT_FILE")
+        # Use a temporary .git-credentials file and configure git to use it
+        # Format: https://<token>@github.com
+        # Note: This approach stores the credential in a file within the container's home directory.
+        # For enhanced security, consider using git's credential.helper or other methods
+        # that don't write the PAT to a file on disk if your Git server supports it.
+        echo "https://${GIT_PAT}@$(echo "${REPO_URL}" | sed -e 's|^https://||' -e 's|/.*$||')" > ~/.git-credentials
+        git config --global credential.helper store
+        echo "Git credential helper configured using PAT."
+    else
+        echo "Warning: Git PAT file not found at $GIT_PAT_FILE. Proceeding without explicit authentication."
+        # This might fail for private repositories unless other auth methods are configured (e.g., SSH)
+    fi
+
+    # 1. Get the latest commit SHA from the remote repository
+    # Use git ls-remote for efficiency - avoids cloning
+    CURRENT_COMMIT_SHA=$(git ls-remote "${REPO_URL}" "refs/heads/${BRANCH}" | awk '{print $1}')
+
+    if [ -z "$CURRENT_COMMIT_SHA" ]; then
+      echo "Error: Could not get current commit SHA from ${REPO_URL} on branch ${BRANCH}. Exiting."
+      exit 1
+    fi
+
+    echo "Current commit SHA: ${CURRENT_COMMIT_SHA}"
+
+    # 2. Read the last triggered commit SHA from the State ConfigMap
+    # We need to handle the case where the ConfigMap or key doesn't exist yet (first run)
+    set +e # Allow kubectl get to fail if CM/key not found initially
+    LAST_COMMIT_SHA=$(kubectl get configmap "${STATE_CONFIGMAP}" -n "${TEKTON_NAMESPACE}" -o jsonpath="{.data.${STATE_CM_KEY}}" --ignore-not-found)
+    set -e # Re-enable strict mode
+
+    if [ -z "$LAST_COMMIT_SHA" ]; then
+        echo "No previous commit SHA found in ConfigMap '${STATE_CONFIGMAP}' key '${STATE_CM_KEY}'. Assuming first run or state reset."
+        LAST_COMMIT_SHA="<initial_sha>" # Use a placeholder that won't match a real SHA
+    else
+        echo "Last triggered commit SHA from state: ${LAST_COMMIT_SHA}"
+    fi
+
+    # 3. Compare SHAs and trigger if different
+    if [ "$CURRENT_COMMIT_SHA" != "$LAST_COMMIT_SHA" ]; then
+        echo "New commit detected! ${LAST_COMMIT_SHA} -> ${CURRENT_COMMIT_SHA}"
+        echo "Triggering Tekton EventListener at ${EVENT_LISTENER_URL}..."
+
+        # Construct a simple payload (mimicking part of a GitHub push webhook)
+        # This payload must match what your Tekton TriggerBinding expects.
+        # Ensure jq is available in your container image to build the JSON.
+        PAYLOAD=$(jq -n \
+            --arg ref "refs/heads/${BRANCH}" \
+            --arg after "${CURRENT_COMMIT_SHA}" \
+            --arg repo_url "${REPO_URL}" \
+            --arg user_email "${CONFIGURED_USER_EMAIL}" \
+            '{ref: $ref, after: $after, commits: $after, object_kind: "push", user_email: $user_email, repository: {git_http_url: $repo_url}}')
+
+        echo "Sending payload: ${PAYLOAD}"
+
+        # Send the POST request to the EventListener Service
+        # -s: Silent mode
+        # -o /dev/null: Discard output
+        # -w "%{http_code}": Print only the HTTP status code
+        response_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+                             -H "Content-Type: application/json" \
+                             -d "${PAYLOAD}" \
+                             "${EVENT_LISTENER_URL}")
+
+        if [ "$response_code" -ge 200 ] && [ "$response_code" -lt 300 ]; then
+            echo "Tekton EventListener triggered successfully (HTTP ${response_code})."
+
+            # 4. Update the last triggered commit SHA in the State ConfigMap
+            echo "Updating ConfigMap '${STATE_CONFIGMAP}' key '${STATE_CM_KEY}' with new SHA ${CURRENT_COMMIT_SHA}..."
+            # Use kubectl patch to update the specific key in the data field
+            kubectl patch configmap "${STATE_CONFIGMAP}" -n "${TEKTON_NAMESPACE}" \
+                    --patch '{"data":{"'"${STATE_CM_KEY}"'":"'"${CURRENT_COMMIT_SHA}"'"}}'
+            if [ $? -eq 0 ]; then
+                echo "State ConfigMap updated successfully."
+            else
+                echo "Warning: Failed to update state ConfigMap. Subsequent runs might re-trigger for this commit."
+                # Decide if you want the job to fail here. For polling state updates, maybe not critical.
+            fi
+
+        else
+            echo "Error triggering Tekton EventListener. Received HTTP status code: ${response_code}."
+            # If triggering fails, we should probably exit with an error so the Job is marked failed.
+            exit 1
+        fi
+
+    else
+        echo "No new commits detected. Latest SHA (${CURRENT_COMMIT_SHA}) matches last triggered SHA."
+    fi
+
+    echo "Polling job finished."

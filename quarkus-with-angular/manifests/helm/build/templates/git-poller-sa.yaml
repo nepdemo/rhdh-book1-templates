@@ -1,0 +1,8 @@
+{{/*
+ServiceAccount for the CronJob
+The CronJob Pod will run as this ServiceAccount.
+*/}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: git-poller-sa

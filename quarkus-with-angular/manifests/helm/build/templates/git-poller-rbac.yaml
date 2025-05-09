@@ -1,0 +1,29 @@
+{{/*
+RBAC Role and RoleBinding
+These grant the ServiceAccount permission to get and patch the State ConfigMap.
+*/}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: git-poller-state-updater-role-{{ .Values.app.name }} # Add app name for uniqueness
+  namespace: {{ .Release.Namespace }} # Use the release namespace
+rules:
+- apiGroups: [""] # Core Kubernetes API group
+  resources: ["configmaps"]
+  verbs: ["get", "patch"] # Need get to read and patch to update
+  resourceNames: ["git-polling-state-{{ .Values.app.name }}"] # Restrict to only the state ConfigMap
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: git-poller-state-updater-binding-{{ .Values.app.name }} # Add app name for uniqueness
+  namespace: {{ .Release.Namespace }} # Use the release namespace
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: git-poller-state-updater-role-{{ .Values.app.name }} # Name of the Role defined above
+subjects:
+- kind: ServiceAccount
+  name: git-poller-sa # Name of the ServiceAccount defined above
+  namespace: {{ .Release.Namespace }} # Must match the ServiceAccount's namespace

@@ -1,0 +1,12 @@
+{{/*
+ConfigMap for Storing State (Last Triggered SHA)
+This ConfigMap holds the SHA of the last commit that successfully triggered a pipeline.
+You need to create this ConfigMap manually before the first run.
+The 'last-commit-sha' key should ideally be empty initially or contain a dummy value.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: git-polling-state-{{ .Values.app.name }} # Add app name for uniqueness
+data:
+  last-commit-sha: "" # This will be updated by the script

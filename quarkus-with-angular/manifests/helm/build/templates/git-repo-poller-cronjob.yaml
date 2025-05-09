@@ -1,0 +1,47 @@
+{{/*
+The CronJob Definition
+*/}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: git-repo-poller-{{ .Values.app.name }} # Add app name for uniqueness
+spec:
+  schedule: {{ .Values.git.pollSchedule | quote }} # Cron expression: runs every 5 minutes
+  concurrencyPolicy: Forbid # Prevent concurrent job runs if a previous one is still running
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: git-poller-sa # Use the dedicated ServiceAccount
+          restartPolicy: OnFailure # Restart the container if it fails, but the Job will finish if the container exits
+          containers:
+          - name: poller
+            # Replace with your custom image containing git, curl, kubectl, and jq
+            image: {{ .Values.git.pollerImage | quote }}
+            imagePullPolicy: IfNotPresent
+            command: ["/bin/bash", "/opt/script/poll-and-trigger.sh"]
+            args:
+            - {{ .Values.git.repo | quote }}       # Git repository URL
+            - {{ .Values.git.branch | quote }}        # Branch name to poll
+            - {{ .Values.app.name }}-el | quote }} # Tekton EventListener Service Name
+            - {{ .Release.Namespace | quote }}        # EventListener Namespace
+            - git-polling-state-{{ .Values.app.name }} | quote }}       # Name of the state ConfigMap
+            - "last-commit-sha"         # Key in the state ConfigMap
+            - {{ .Values.git.committerEmail | quote }} # Committer email
+            volumeMounts:
+            - name: script-volume
+              mountPath: /opt/script
+            - name: github-pat-volume # Mount the Secret containing the PAT
+              mountPath: /etc/git-credentials # Mount point for credentials
+              readOnly: true # Credentials should be read-only
+          volumes:
+          - name: script-volume
+            configMap:
+              name: git-poller-script-{{ .Values.app.name }} # Mount the script ConfigMap
+              defaultMode: 0755 # Make the script executable
+          - name: github-pat-volume # Define the volume for the Secret
+            secret:
+              secretName: {{ .Values.git.patSecretName | default "github-pat-secret" | quote }} # Name of the Secret created above
+              items:
+              - key: {{ .Values.git.patSecretKey | default "pat" | quote }} # Key in the Secret data
+                path: pat # File name inside the mountPath (/etc/git-credentials/pat)
