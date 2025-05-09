@@ -54,13 +54,13 @@ kind: API
 metadata:
   name: ${{values.component_id}}-api
   description: API surface exposed by the Quarkus service
-  links:
-    - url: https://${{values.component_id}}-${{values.namespace}}${{values.cluster_id}}/q/swagger-ui
-      title: Swagger UI
-      icon: web
-    - url: https://${{values.git_host}}/${{values.gitlabGroup}}/${{values.repoName}}/-/blob/main/src/main/resources/META-INF/openapi.yaml
-      title: API Spec
-      icon: code
+  # links:
+  #   - url: https://${{values.component_id}}-${{values.namespace}}${{values.cluster_id}}/q/swagger-ui
+  #     title: Swagger UI
+  #     icon: web
+  #   - url: https://${{values.git_host}}/${{values.gitlabGroup}}/${{values.repoName}}/-/blob/main/src/main/resources/META-INF/openapi.yaml
+  #     title: API Spec
+  #     icon: code
 spec:
   type: openapi
   lifecycle: production

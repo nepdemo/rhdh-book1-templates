@@ -15,23 +15,22 @@ spec:
   type: service
 
   parameters:
-    - title: Provide information about the GitLab location
+    - title: Provide information about the GitHub location
       required:
-        - gitlabGroup
-        - k8s_namespace
+        - githubOrg
       properties:
-        gitlabGroup:
-          title: Repo Owner
+        git_host:
+          title: Git host
           type: string
-          description: GitLab Organization
-          default: development
-          enum:
-            - development
-        k8s_namespace:
-          title: Kubernetes Namespace for gitlab
+          default: github.com
+        githubOrg:
+          title: GitHub Organization
           type: string
-          description: Kubernetes Namespace for gitlab
-          default: demo-gitlab
+          default: nepdemo
+        repoName:
+          title: Repository Name
+          type: string
+          default: rhdh-book1-templates
         git_token:
           title: GitHub access token
           type: string
@@ -40,7 +39,6 @@ spec:
           title: Description
           type: string
           description: Help others understand what this component is for
-          default: Creates a Quarkus service hosting an Angular frontend
     - title: Provide information about the new component
       required:
         - cluster_id
@@ -100,8 +98,8 @@ spec:
         url: ./skeleton
         targetPath: ./source
         values:
-          git_host: gitlab-${{parameters.k8s_namespace}}${{parameters.cluster_id}}
-          gitlabGroup: ${{parameters.gitlabGroup}}
+          git_host: ${{ parameters.git_host }}
+          gitlabGroup: ${{ parameters.githubOrg }}
           repoName: ${{parameters.namespace}}-${{parameters.application_id}}
           owner: ${{parameters.owner}}
           cluster_id: ${{parameters.cluster_id}}
@@ -111,14 +109,14 @@ spec:
           description: ${{parameters.description}}
     - id: publishSource
       name: Publishing to Source Code Repository
-      action: publish:gitlab
+      action: publish:github
       input:
         sourcePath: ./source
         description: ${{parameters.description}}
-        repoUrl: gitlab-${{parameters.k8s_namespace}}${{parameters.cluster_id}}?owner=${{parameters.gitlabGroup}}&repo=${{parameters.namespace}}-${{parameters.application_id}}
+        repoUrl: github.com?owner=${{ parameters.githubOrg }}&repo=${{parameters.namespace}}-${{parameters.application_id}}
         defaultBranch: main
         protectDefaultBranch: false
-        repoVisibility: public
+        repoVisibility: private
     - id: templateGitops
       name: Generating the deployment resources and artefacts
       action: fetch:template
@@ -126,13 +124,13 @@ spec:
         url: ./manifests
         copyWithoutTemplating: []
         values:
-          git_host: gitlab-${{parameters.k8s_namespace}}${{parameters.cluster_id}}
+          git_host: ${{ parameters.git_host }}
           component_id: ${{parameters.namespace}}-${{parameters.application_id}}
           description: ${{parameters.description}}
-          destination: https://gitlab-${{parameters.k8s_namespace}}${{parameters.cluster_id}}/${{parameters.gitlabGroup}}/${{parameters.namespace}}-${{parameters.application_id}}-gitops.git
-          source_repository: https://gitlab-${{parameters.k8s_namespace}}${{parameters.cluster_id}}/${{parameters.gitlabGroup}}/${{parameters.namespace}}-${{parameters.application_id}}.git
+          destination: https://github.com/${{parameters.githubOrg}}/${{parameters.namespace}}-${{parameters.application_id}}-gitops.git
+          source_repository: https://github.com/${{parameters.githubOrg}}/${{parameters.namespace}}-${{parameters.application_id}}.git
           repository_name: ${{parameters.namespace}}-${{parameters.application_id}}
-          git_owner: ${{parameters.gitlabGroup}}
+          git_owner: ${{parameters.githubOrg}}
           git_token: ${{parameters.git_token}}
           cluster: ${{parameters.cluster_id}}
           namespace: ${{parameters.namespace}}
@@ -144,9 +142,9 @@ spec:
         targetPath: ./tenant-gitops
     - id: publishGitops
       name: Publishing to Deployment Resource Repository
-      action: publish:gitlab
+      action: publish:github
       input:
-        repoUrl: gitlab-${{parameters.k8s_namespace}}${{parameters.cluster_id}}?owner=${{parameters.gitlabGroup}}&repo=${{parameters.namespace}}-${{parameters.application_id}}-gitops
+        repoUrl: github.com?owner=${{parameters.githubOrg}}&repo=${{parameters.namespace}}-${{parameters.application_id}}-gitops
         title: gitops resources for ${{parameters.namespace}}-${{parameters.application_id}}
         description: gitops resources for ${{parameters.namespace}}-${{parameters.application_id}}
         sourcePath: ./tenant-gitops
@@ -172,12 +170,12 @@ spec:
         appName: ${{parameters.namespace}}-${{parameters.application_id}}-bootstrap
         argoInstance: main
         namespace: ${{parameters.gitops_namespace}}
-        repoUrl: https://gitlab-${{parameters.k8s_namespace}}${{parameters.cluster_id}}/${{parameters.gitlabGroup}}/${{parameters.namespace}}-${{parameters.application_id}}-gitops.git
+        repoUrl: https://github.com/${{parameters.githubOrg}}/${{parameters.namespace}}-${{parameters.application_id}}-gitops.git
         path: 'argocd/'
   output:
     links:
       - title: Source Code Repository
-        url: ${{steps.publishSource.output.remoteUrl}}
+        url: https://github.com/${{parameters.githubOrg}}/${{parameters.namespace}}-${{parameters.application_id}}
       - title: Pipeline status
         url: https://console-openshift-console${{parameters.cluster_id}}/dev-pipelines/ns/${{parameters.namespace}}/
       - title: Open Quarkus Service Component
