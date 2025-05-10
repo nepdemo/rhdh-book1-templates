@@ -113,7 +113,7 @@ spec:
       input:
         sourcePath: ./source
         description: ${{parameters.description}}
-        repoUrl: github.com?owner=${{ parameters.githubOrg }}&repo=${{parameters.namespace}}-${{parameters.application_id}}
+        repoUrl: ${{ parameters.git_host }}?owner=${{ parameters.githubOrg }}&repo=${{parameters.namespace}}-${{parameters.application_id}}
         defaultBranch: main
         protectDefaultBranch: false
         repoVisibility: private
@@ -170,12 +170,12 @@ spec:
         appName: ${{parameters.namespace}}-${{parameters.application_id}}-bootstrap
         argoInstance: main
         namespace: ${{parameters.gitops_namespace}}
-        repoUrl: https://github.com/${{parameters.githubOrg}}/${{parameters.namespace}}-${{parameters.application_id}}-gitops.git
+        repoUrl: https://${{ parameters.git_host }}/${{parameters.githubOrg}}/${{parameters.namespace}}-${{parameters.application_id}}-gitops.git
         path: 'argocd/'
   output:
     links:
       - title: Source Code Repository
-        url: https://github.com/${{parameters.githubOrg}}/${{parameters.namespace}}-${{parameters.application_id}}
+        url: https://${{ parameters.git_host }}/${{parameters.githubOrg}}/${{parameters.namespace}}-${{parameters.application_id}}
       - title: Pipeline status
         url: https://console-openshift-console${{parameters.cluster_id}}/dev-pipelines/ns/${{parameters.namespace}}/
       - title: Open Quarkus Service Component
