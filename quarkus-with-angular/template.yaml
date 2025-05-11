@@ -62,12 +62,12 @@ spec:
           title: GitOps Namespace
           type: string
           description: Namespace for storing gitops resources
-          default: demo-gitops
+          default: janus-argocd
         application_id: 
           title: Application Id
           type: string
           description: Id of the application
-          default: demo-02
+          default: demo-01
         owner:
           title: Owner
           type: string
