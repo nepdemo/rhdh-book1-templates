@@ -32,6 +32,9 @@ spec:
       # default: gcr.io/kaniko-project/executor:v1.5.1@sha256:c6166717f7fe0b7da44908c986137ecfeab21f31ec3992f6e128fff8a94be8a5
       # default: gcr.io/kaniko-project/executor:v1.23.2-debug
       default: gcr.io/kaniko-project/executor:v1.5.1-debug
+    - name: IMAGE_TAG
+      description: Tag to use for the image (will be overridden with date-based tag)
+      default: "latest"
   workspaces:
     - name: source
       description: Holds the context and Dockerfile
@@ -45,7 +48,7 @@ spec:
     - name: IMAGE_URL
       description: URL of the image just built.
   steps:
-    - name: generate-tag
+    - name: prepare-image-name
       workingDir: $(workspaces.source.path)
       image: registry.access.redhat.com/ubi8
       script: |
@@ -54,12 +57,16 @@ spec:
         # Generate tag with date and random number
         DATE_TAG=$(date +%Y%m%d)-$(shuf -i 1000-9999 -n 1)
         # Set the full image name with new tag
-        FULL_IMAGE="${IMAGE_WITHOUT_TAG}:demo-rhdh-${DATE_TAG}"
-        # Save for later steps
-        echo "${FULL_IMAGE}" > /tekton/home/image-name
-        echo "${DATE_TAG}" > /tekton/home/image-tag
+        FULL_IMAGE="${IMAGE_WITHOUT_TAG}:${DATE_TAG}"
+        # Save for later steps in the workspace
+        echo "${FULL_IMAGE}" > $(workspaces.source.path)/image-name.txt
+        echo "${DATE_TAG}" > $(workspaces.source.path)/image-tag.txt
         echo "Generated image tag: ${DATE_TAG}"
         echo "Full image name: ${FULL_IMAGE}"
+        
+        # Create a destination file that kaniko can read directly
+        # This avoids shell interpretation issues in the kaniko container
+        echo "${FULL_IMAGE}" > $(workspaces.source.path)/.kaniko-destination
     
     - name: build-and-push
       workingDir: $(workspaces.source.path)
@@ -67,14 +74,11 @@ spec:
       command:
         - /kaniko/executor
       args:
-        - $(params.EXTRA_ARGS)
         - --dockerfile=$(params.DOCKERFILE)
-        - --context=$(workspaces.source.path)/$(params.CONTEXT) # The user does not need to care the workspace and the source.
-        - --destination=$(cat /tekton/home/image-name)
+        - --context=$(workspaces.source.path)/$(params.CONTEXT)
+        - --destination-file=$(workspaces.source.path)/.kaniko-destination
         - --digest-file=$(results.IMAGE_DIGEST.path)
         - --skip-tls-verify
-        # - --ignore-path=/usr/bin/newuidmap
-        # - --ignore-path=/usr/bin/newgidmap
       # kaniko assumes it is running as root, which means this example fails on platforms
       # that default to run containers as random uid (like OpenShift). Adding this securityContext
       # makes it explicit that it needs to run as root.
@@ -85,5 +89,5 @@ spec:
       script: |
         set -e
         # Use the image name with dynamic tag that was generated in the previous step
-        image=$(cat /tekton/home/image-name)
+        image=$(cat $(workspaces.source.path)/.kaniko-destination)
         echo -n "${image}" | tee "$(results.IMAGE_URL.path)"
