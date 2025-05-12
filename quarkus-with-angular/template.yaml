@@ -31,10 +31,10 @@ spec:
           title: Repository Name
           type: string
           default: rhdh-book1-templates
-        git_token:
-          title: GitHub access token
-          type: string
-          description: GitHub access token
+        # git_token:
+        #   title: GitHub access token
+        #   type: string
+        #   description: GitHub access token
         description:
           title: Description
           type: string
@@ -132,7 +132,7 @@ spec:
           source_repository: https://github.com/${{parameters.githubOrg}}/${{parameters.namespace}}-${{parameters.application_id}}.git
           repository_name: ${{parameters.namespace}}-${{parameters.application_id}}
           git_owner: ${{parameters.githubOrg}}
-          git_token: ${{parameters.git_token}}
+          # git_token: ${{parameters.git_token}}
           cluster: ${{parameters.cluster_id}}
           namespace: ${{parameters.namespace}}
           gitops_namespace: ${{parameters.gitops_namespace}}

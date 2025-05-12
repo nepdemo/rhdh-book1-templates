@@ -9,7 +9,7 @@ git:
   org: ${{values.git_owner}}
   name: ${{values.repository_name}}
   host: ${{values.git_host}}
-  token: ${{values.git_token}}
+  # token: ${{values.git_token}}
   webhookSecret: ''
   pollSchedule: "*/1 * * * *"
   pollerImage: "quay.io/wangzheng422/qimgs:rocky9-test-2025.04.30.v01"
