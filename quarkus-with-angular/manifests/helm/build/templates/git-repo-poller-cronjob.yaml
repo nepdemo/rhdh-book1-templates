@@ -23,9 +23,9 @@ spec:
             args:
             - {{ .Values.git.repo | quote }}       # Git repository URL
             - {{ .Values.git.branch | quote }}        # Branch name to poll
-            - {{ .Values.app.name }}-el | quote }} # Tekton EventListener Service Name
+            - {{ printf "%s-el" .Values.app.name | quote }} # Tekton EventListener Service Name
             - {{ .Release.Namespace | quote }}        # EventListener Namespace
-            - git-polling-state-{{ .Values.app.name }} | quote }}       # Name of the state ConfigMap
+            - {{ printf "git-polling-state-%s" .Values.app.name | quote }}       # Name of the state ConfigMap
             - "last-commit-sha"         # Key in the state ConfigMap
             - {{ .Values.git.committerEmail | quote }} # Committer email
             volumeMounts:
