@@ -12,12 +12,12 @@ metadata:
     tekton.dev/platforms: "linux/amd64,linux/arm64,linux/ppc64le"
 spec:
   description: >-
-    This Task builds a simple Dockerfile with kaniko and pushes to a registry.
-    This Task stores the image name and digest as results, allowing Tekton Chains to pick up
+    This Task builds a simple Dockerfile with kaniko and pushes to a registry using the full image name provided.
+    This Task stores the image digest as a result, allowing Tekton Chains to pick up
     that an image was built & sign it.
   params:
     - name: IMAGE
-      description: Name (reference) of the image to build.
+      description: Full name (reference) of the image to build (e.g., image-registry.openshift-image-registry.svc:5000/namespace/app:tag).
     - name: DOCKERFILE
       description: Path to the Dockerfile to build.
       default: ./Dockerfile
@@ -32,9 +32,6 @@ spec:
       # default: gcr.io/kaniko-project/executor:v1.5.1@sha256:c6166717f7fe0b7da44908c986137ecfeab21f31ec3992f6e128fff8a94be8a5
       # default: gcr.io/kaniko-project/executor:v1.23.2-debug
       default: gcr.io/kaniko-project/executor:v1.5.1-debug
-    - name: IMAGE_TAG
-      description: Tag to use for the image (will be overridden with date-based tag)
-      default: "latest"
   workspaces:
     - name: source
       description: Holds the context and Dockerfile
@@ -48,26 +45,6 @@ spec:
     - name: IMAGE_URL
       description: URL of the image just built.
   steps:
-    - name: prepare-image-name
-      workingDir: $(workspaces.source.path)
-      image: registry.access.redhat.com/ubi8
-      script: |
-        # Extract image name without tag
-        IMAGE_WITHOUT_TAG=$(echo "$(params.IMAGE)" | cut -d ':' -f 1)
-        # Generate tag with date and random number
-        DATE_TAG=$(date +%Y%m%d)-$(shuf -i 1000-9999 -n 1)
-        # Set the full image name with new tag
-        FULL_IMAGE="${IMAGE_WITHOUT_TAG}:${DATE_TAG}"
-        # Save for later steps in the workspace
-        echo "${FULL_IMAGE}" > $(workspaces.source.path)/image-name.txt
-        echo "${DATE_TAG}" > $(workspaces.source.path)/image-tag.txt
-        echo "Generated image tag: ${DATE_TAG}"
-        echo "Full image name: ${FULL_IMAGE}"
-        
-        # Create a destination file that kaniko can read directly
-        # This avoids shell interpretation issues in the kaniko container
-        echo "${FULL_IMAGE}" > $(workspaces.source.path)/.kaniko-destination
-    
     - name: build-and-push
       workingDir: $(workspaces.source.path)
       image: $(params.BUILDER_IMAGE)
@@ -76,7 +53,7 @@ spec:
       args:
         - --dockerfile=$(params.DOCKERFILE)
         - --context=$(workspaces.source.path)/$(params.CONTEXT)
-        - --destination-file=$(workspaces.source.path)/.kaniko-destination
+        - --destination=$(params.IMAGE)
         - --digest-file=$(results.IMAGE_DIGEST.path)
         - --skip-tls-verify
       # kaniko assumes it is running as root, which means this example fails on platforms
@@ -88,6 +65,4 @@ spec:
       image: registry.access.redhat.com/ubi8
       script: |
         set -e
-        # Use the image name with dynamic tag that was generated in the previous step
-        image=$(cat $(workspaces.source.path)/.kaniko-destination)
-        echo -n "${image}" | tee "$(results.IMAGE_URL.path)"
+        echo -n "$(params.IMAGE)" | tee "$(results.IMAGE_URL.path)"

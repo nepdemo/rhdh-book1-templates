@@ -54,12 +54,25 @@ spec:
           workspace: source-folder
         - name: maven-settings
           workspace: maven-settings
-    - name: build-and-push
+    - name: prepare-image-name
       params:
         - name: IMAGE
           value: $(params.output-image)
       runAfter:
+        - git-clone # Only needs the source, not the built artifact
+      taskRef:
+        kind: Task
+        name: {{ .Values.app.name }}-prepare-image-name
+      workspaces:
+        - name: source # Needs a workspace to write results, even if not strictly using source code
+          workspace: source-folder
+    - name: build-and-push
+      params:
+        - name: IMAGE
+          value: $(tasks.prepare-image-name.results.full-image-name) # Use result from prepare task
+      runAfter:
         - package
+        - prepare-image-name # Must run after both package and prepare-image-name
       taskRef:
         kind: Task
         name: kaniko-{{ .Values.app.name }}
@@ -67,7 +80,7 @@ spec:
         - name: source
           workspace: source-folder
         - name: dockerconfig
-          workspace: docker-auth          
+          workspace: docker-auth
     - name: resync
       params:
         - name: COMPONENT_ID
