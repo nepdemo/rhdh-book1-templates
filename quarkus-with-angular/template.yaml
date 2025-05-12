@@ -151,7 +151,7 @@ spec:
         sourcePath: ./tenant-gitops
         defaultBranch: main
         protectDefaultBranch: false
-        repoVisibility: public
+        repoVisibility: private
     - id: registerSource1
       name: Register Quarkus Service Component
       action: catalog:register
