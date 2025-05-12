@@ -22,7 +22,7 @@ spec:
         # Extract image name without tag
         IMAGE_WITHOUT_TAG=$(echo "$(params.IMAGE)" | cut -d ':' -f 1)
         # Generate tag with date and random number
-        DATE_TAG=$(date +%Y%m%d)-$(shuf -i 1000-9999 -n 1)
+        DATE_TAG=$(date +%Y%m%d%H%M%S)-$(shuf -i 1000-9999 -n 1)
         # Set the full image name with new tag
         FULL_IMAGE="${IMAGE_WITHOUT_TAG}:${DATE_TAG}"
         # Save for the result

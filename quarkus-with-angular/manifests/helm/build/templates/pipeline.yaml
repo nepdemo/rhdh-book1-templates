@@ -2,10 +2,10 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
-  name: {{ .Values.app.name }}-pipeline
+  name: {{ quote (printf "%s-pipeline" .Values.app.name) }}
   labels:
     type: pipeline
-    backstage.io/kubernetes-id: ${{values.component_id}}
+    backstage.io/kubernetes-id: {{ .Values.app.name }}
 spec:
   params:
     - name: source-repo
@@ -62,10 +62,7 @@ spec:
         - git-clone # Only needs the source, not the built artifact
       taskRef:
         kind: Task
-        name: {{ .Values.app.name }}-prepare-image-name
-      workspaces:
-        - name: source # Needs a workspace to write results, even if not strictly using source code
-          workspace: source-folder
+        name: repare-image-name-{{ .Values.app.name }}
     - name: build-and-push
       params:
         - name: IMAGE
@@ -87,6 +84,8 @@ spec:
           value: $(params.component-id)
         - name: NAMESPACE
           value: $(params.namespace)
+        - name: IMAGE
+          value: $(tasks.prepare-image-name.results.full-image-name)
       runAfter:
         - build-and-push
       taskRef:
