@@ -67,7 +67,7 @@ spec:
           title: Application Id
           type: string
           description: Id of the application
-          default: demo-01
+          default: demo-02
         owner:
           title: Owner
           type: string
@@ -117,7 +117,7 @@ spec:
         repoUrl: ${{ parameters.git_host }}?owner=${{ parameters.githubOrg }}&repo=${{parameters.namespace}}-${{parameters.application_id}}
         defaultBranch: main
         protectDefaultBranch: false
-        repoVisibility: private
+        repoVisibility: public
     - id: templateGitops
       name: Generating the deployment resources and artefacts
       action: fetch:template
