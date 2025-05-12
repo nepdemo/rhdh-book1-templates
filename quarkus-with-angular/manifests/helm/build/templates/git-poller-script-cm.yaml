@@ -25,24 +25,6 @@ data:
 
     echo "Starting Git polling for ${REPO_URL} branch ${BRANCH}..."
 
-    # Configure Git to use the PAT from the mounted Secret for authentication
-    # This assumes the Secret is mounted at /etc/git-credentials with a file named 'pat'
-    GIT_PAT_FILE="/etc/git-credentials/pat"
-    if [ -f "$GIT_PAT_FILE" ]; then
-        GIT_PAT=$(cat "$GIT_PAT_FILE")
-        # Use a temporary .git-credentials file and configure git to use it
-        # Format: https://<token>@github.com
-        # Note: This approach stores the credential in a file within the container's home directory.
-        # For enhanced security, consider using git's credential.helper or other methods
-        # that don't write the PAT to a file on disk if your Git server supports it.
-        echo "https://${GIT_PAT}@$(echo "${REPO_URL}" | sed -e 's|^https://||' -e 's|/.*$||')" > ~/.git-credentials
-        git config --global credential.helper store
-        echo "Git credential helper configured using PAT."
-    else
-        echo "Warning: Git PAT file not found at $GIT_PAT_FILE. Proceeding without explicit authentication."
-        # This might fail for private repositories unless other auth methods are configured (e.g., SSH)
-    fi
-
     # 1. Get the latest commit SHA from the remote repository
     # Use git ls-remote for efficiency - avoids cloning
     CURRENT_COMMIT_SHA=$(git ls-remote "${REPO_URL}" "refs/heads/${BRANCH}" | awk '{print $1}')
@@ -97,7 +79,7 @@ data:
             echo "Tekton EventListener triggered successfully (HTTP ${response_code})."
 
             # 4. Update the last triggered commit SHA in the State ConfigMap
-            echo "Updating ConfigMap '${STATE_CONFIGMAP}' key '${STATE_CM_KEY}' with new SHA ${CURRENT_COMMIT_SHA}..."`
+            echo "Updating ConfigMap '${STATE_CONFIGMAP}' key '${STATE_CM_KEY}' with new SHA ${CURRENT_COMMIT_SHA}..."
             # Use kubectl patch to update the specific key in the data field
             kubectl patch configmap "${STATE_CONFIGMAP}" -n "${TEKTON_NAMESPACE}" \
                     --patch '{"data":{"'"${STATE_CM_KEY}"'":"'"${CURRENT_COMMIT_SHA}"'"}}'
