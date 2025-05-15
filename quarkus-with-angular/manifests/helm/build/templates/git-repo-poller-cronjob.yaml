@@ -13,6 +13,9 @@ spec:
       template:
         spec:
           serviceAccountName: git-poller-sa # Use the dedicated ServiceAccount
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
           restartPolicy: OnFailure # Restart the container if it fails, but the Job will finish if the container exits
           containers:
           - name: poller
